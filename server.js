@@ -1,12 +1,9 @@
 var express = require('express'),
-    request = require('request'),
+    fetch = require('node-fetch'),
     bodyParser = require('body-parser'),
     app = express();
 
-var myLimit = typeof(process.argv[2]) != 'undefined' ? process.argv[2] : '100kb';
-console.log('Using limit: ', myLimit);
-
-app.use(bodyParser.json({limit: myLimit}));
+app.use(bodyParser.json({limit: '500kb'}));
 
 app.all('*', function (req, res, next) {
 
@@ -16,25 +13,32 @@ app.all('*', function (req, res, next) {
     res.header("Access-Control-Allow-Headers", req.header('access-control-request-headers'));
 
     if (req.method === 'OPTIONS') {
-        // CORS Preflight
         res.send();
     } else {
         var targetURL = req.header('Target-URL');
         if (!targetURL) {
-            res.send(500, { error: 'There is no Target-Endpoint header in the request' });
+            res.send(500, { error: 'There is no Target-URL header in the request' });
             return;
         }
-        request({ url: targetURL + req.url, method: req.method, json: req.body, headers: {'Authorization': req.header('Authorization')} },
-            function (error, response, body) {
-                if (error) {
-                    console.error('error: ' + response.statusCode)
-                }
-//                console.log(body);
-            }).pipe(res);
+        const options = {
+            method: req.method,
+            headers: {
+                "content-type": "application/json",
+                'Authorization': req.header('Authorization')
+            }
+        }
+        if(req.method !== "GET"){
+            options.body = req.body
+        }
+        fetch(`${targetURL + req.url}`,options).then((response) => {
+            return response.json()
+        }).then((json) => {
+            res.json(json)
+        });
     }
 });
 
-app.set('port', process.env.PORT || 3000);
+app.set('port', process.env.PORT || 8010);
 
 app.listen(app.get('port'), function () {
     console.log('Proxy server listening on port ' + app.get('port'));
