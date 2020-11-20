@@ -28,7 +28,7 @@ app.all('*', function (req, res, next) {
             }
         }
         if(req.method !== "GET"){
-            options.body = req.body
+            options.body = JSON.stringify(req.body)
         }
         fetch(`${targetURL + req.url}`,options).then((response) => {
             return response.json()
